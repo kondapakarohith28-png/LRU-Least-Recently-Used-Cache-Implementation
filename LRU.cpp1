@@ -1,0 +1,120 @@
+#include <iostream>
+#include <unordered_map>
+using namespace std;
+
+// Node structure for Doubly Linked List
+class Node {
+public:
+    int key, value;
+    Node* prev;
+    Node* next;
+
+    Node(int k, int v) {
+        key = k;
+        value = v;
+        prev = next = NULL;
+    }
+};
+
+class LRUCache {
+private:
+    int capacity;
+    unordered_map<int, Node*> mp;
+    Node *head, *tail;
+
+    // Add node right after head
+    void addNode(Node* node) {
+        node->next = head->next;
+        node->prev = head;
+
+        head->next->prev = node;
+        head->next = node;
+    }
+
+    // Remove a node from list
+    void deleteNode(Node* node) {
+        Node* prevNode = node->prev;
+        Node* nextNode = node->next;
+
+        prevNode->next = nextNode;
+        nextNode->prev = prevNode;
+    }
+
+public:
+    LRUCache(int cap) {
+        capacity = cap;
+        head = new Node(-1, -1); // dummy head
+        tail = new Node(-1, -1); // dummy tail
+
+        head->next = tail;
+        tail->prev = head;
+    }
+
+    int get(int key) {
+        if (mp.find(key) != mp.end()) {
+            Node* node = mp[key];
+            int value = node->value;
+
+            // Move accessed node to front
+            deleteNode(node);
+            addNode(node);
+
+            return value;
+        }
+        return -1;
+    }
+
+    void put(int key, int value) {
+        if (mp.find(key) != mp.end()) {
+            Node* existing = mp[key];
+            deleteNode(existing);
+            mp.erase(key);
+        }
+
+        if (mp.size() == capacity) {
+            // Remove least recently used (tail->prev)
+            Node* lru = tail->prev;
+            mp.erase(lru->key);
+            deleteNode(lru);
+            delete lru; // free memory
+        }
+
+        Node* newNode = new Node(key, value);
+        addNode(newNode);
+        mp[key] = newNode;
+    }
+
+    // Debug function to display cache state
+    void display() {
+        Node* temp = head->next;
+        cout << "Cache (MRU -> LRU): ";
+        while (temp != tail) {
+            cout << "[" << temp->key << ":" << temp->value << "] ";
+            temp = temp->next;
+        }
+        cout << endl;
+    }
+};
+
+int main() {
+    LRUCache cache(3);
+
+    cache.put(1, 10);
+    cache.put(2, 20);
+    cache.put(3, 30);
+
+    cache.display();
+
+    cout << "Get 2: " << cache.get(2) << endl; // moves 2 to front
+    cache.display();
+
+    cache.put(4, 40); // evicts key 1
+    cache.display();
+
+    cout << "Get 1: " << cache.get(1) << endl; // -1 (not found)
+    cout << "Get 3: " << cache.get(3) << endl;
+
+    cache.display();
+
+    return 0;
+}
